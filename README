@@ -1,0 +1,33 @@
+Chiton
+========
+
+Description
+-----------
+
+Chiton is a GTK-based browser for Cassandra
+
+Installation
+------------
+
+Prerequisites:
+
+ * Python 2.5 or later
+ * Twisted 8.1.0 or later
+ * Thrift (latest svn)
+ * PyGTK 2.14 or later
+ * simplejson
+ * Telephus (http://github.com/driftx/Telephus)
+
+Usage
+-----
+
+Run bin/chiton-client --help for options, or run it and connect to a host in your
+Cassandra cluster.
+
+Features
+--------
+
+* Automatic Keyspace, Column, and SuperColumn introspection
+* Browse columns with pagination
+* Completion history for rows and SuperColumn names
+

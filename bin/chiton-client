@@ -1,0 +1,26 @@
+#!/usr/bin/python
+from twisted.internet import gtk2reactor
+gtk2reactor.install()
+from twisted.internet import reactor
+from twisted.python import log, usage
+from chiton.viewer import ChitonViewer
+import sys
+
+class Options(usage.Options):
+    optParameters = [
+        ['host', 'h', None, 'host to connect to', str],
+        ['port', 'p', 9160, 'port', int],
+    ]
+    
+options = Options()
+try:
+    options.parseOptions()
+except usage.UsageError, errortext:
+    print '%s: %s' % (sys.argv[0], errortext)
+    print '%s: Try --help for usage details.' % (sys.argv[0])
+    sys.exit(1)
+
+log.startLogging(sys.stdout)
+
+v = ChitonViewer(options['host'], options['port'])
+reactor.run()
