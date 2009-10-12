@@ -173,6 +173,8 @@ class ChitonViewer(object):
     def _setupKeyspaces(self):
         if self.keyspaces:
             self.keyspaces.clear()
+            for c in self.keyspaceView.get_columns():
+                self.keyspaceView.remove_column(c)
         self._addcol(self.keyspaceView, 'Keyspaces', 0, width=20)
         self.keyspaces = gtk.TreeStore(str)
         self.keyspaceView.set_model(self.keyspaces)
@@ -196,6 +198,8 @@ class ChitonViewer(object):
     def _setupColumns(self):
         if self.columns:
             self.columns.clear()
+            for c in self.columnsView.get_columns():
+                self.columnsView.remove_column(c)
         self._addcol(self.columnsView, 'Column name', 0)
         self._addcol(self.columnsView, 'Value', 1)
         self.columns = gtk.ListStore(str, str)
