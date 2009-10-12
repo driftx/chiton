@@ -2,7 +2,7 @@ from twisted.internet import reactor, defer
 from telephus.client import CassandraClient
 from telephus.protocol import ManagedCassandraClientFactory
 from telephus.cassandra.ttypes import *
-import simplejson, collections, os
+import simplejson, collections, os, uuid
 json_encode = simplejson.dumps
 json_decode = simplejson.loads
 
@@ -233,6 +233,19 @@ class ChitonViewer(object):
                 self.columnEntry.hide()
                 self.columnLabel.hide()
 
+    def decodeColumn(self, column):
+        unames = ['org.apache.cassandra.db.marshal.TimeUUIDType',
+                  'org.apache.cassandra.db.marshal.LexicalUUIDType']
+        cf = self._ksmap[self._currentks][self._currentcf]
+        if cf['Type'] == 'Super':
+            compare = 'CompareSubcolumnsWith'
+        else:
+            compare = 'CompareWith'
+        if cf[compare] in unames:
+            return uuid.UUID(bytes=column)
+        else:
+            return column
+        
     @defer.inlineCallbacks
     def updateView(self, source=None, start='', reverse=False):
         if source == self.goButton:
@@ -252,7 +265,7 @@ class ChitonViewer(object):
             if reverse:
                 cols.reverse()
             for col in cols:
-                self.columns.append([col.column.name, col.column.value])
+                self.columns.append([self.decodeColumn(col.column.name), col.column.value])
             if cols:
                 self._firstcol = cols[0].column.name
                 self._lastcol = cols[-1].column.name
