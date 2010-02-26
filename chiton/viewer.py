@@ -183,17 +183,16 @@ class ChitonViewer(object):
         ks = yield c.get_string_list_property('keyspaces')
         self._status("Found %s keyspaces" % len(ks))
         for i,k in enumerate(ks):
-            if k != 'system':
-                self.keyspaces.append(None, [k])
-                kiter = self.keyspaces.get_iter(str(i))
-                self._status("Describing keyspace '%s'..." % k)
-                r = yield c.describe_keyspace(k)
-                self._status("Received description of keyspace '%s':"""
-                             "%s column families" % (k, len(r)))
-                self._ksmap[k] = r
-                print r
-                for col, info in r.items():
-                    self.keyspaces.append(kiter, [col])
+            self.keyspaces.append(None, [k])
+            kiter = self.keyspaces.get_iter(str(i))
+            self._status("Describing keyspace '%s'..." % k)
+            r = yield c.describe_keyspace(k)
+            self._status("Received description of keyspace '%s':"""
+                         "%s column families" % (k, len(r)))
+            self._ksmap[k] = r
+            print r
+            for col, info in r.items():
+                self.keyspaces.append(kiter, [col])
        
     def _setupColumns(self):
         if self.columns:
