@@ -202,7 +202,8 @@ class ChitonViewer(object):
                 self.columnsView.remove_column(c)
         self._addcol(self.columnsView, 'Column name', 0)
         self._addcol(self.columnsView, 'Value', 1)
-        self.columns = gtk.ListStore(str, str)
+        self._addcol(self.columnsView, 'Timestamp', 2)
+        self.columns = gtk.ListStore(str, str, str)
         self.columnsView.set_model(self.columns)
                 
     def keyspaceChanged(self, selection):
@@ -265,7 +266,8 @@ class ChitonViewer(object):
             if reverse:
                 cols.reverse()
             for col in cols:
-                self.columns.append([self.decodeColumn(col.column.name), col.column.value])
+                self.columns.append([self.decodeColumn(col.column.name),
+                                     col.column.value, col.column.timestamp])
             if cols:
                 self._firstcol = cols[0].column.name
                 self._lastcol = cols[-1].column.name
