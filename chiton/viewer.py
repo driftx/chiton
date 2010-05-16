@@ -303,5 +303,6 @@ class ConnectDialog(object):
         
     def run(self):
         self.result = self.dialog.run()
+        host, port = self.hostEntry.get_text(), self.portEntry.get_text() 
         self.dialog.destroy()
-        return self.result, self.hostEntry.get_text(), self.portEntry.get_text()
+        return self.result, host, port
