@@ -151,6 +151,7 @@ class ChitonViewer(object):
             for x in xrange(3):
                 reactor.connectTCP(host, int(port), self.cmanager)
             yield self.cmanager.deferred
+            print "setting up keyspaces..."
             yield self._setupKeyspaces()
             self._setupColumns()
         except Exception, e:
@@ -178,21 +179,21 @@ class ChitonViewer(object):
         self._addcol(self.keyspaceView, 'Keyspaces', 0, width=20)
         self.keyspaces = gtk.TreeStore(str)
         self.keyspaceView.set_model(self.keyspaces)
-        c = CassandraClient(self.cmanager, '')
+        self._client = CassandraClient(self.cmanager)
         self._status("Fetching keyspaces...")
-        ks = yield c.get_string_list_property('keyspaces')
+        ks = yield self._client.describe_keyspaces()
         self._status("Found %s keyspaces" % len(ks))
+        print ks
         for i,k in enumerate(ks):
-            self.keyspaces.append(None, [k])
+            self.keyspaces.append(None, [k.name])
             kiter = self.keyspaces.get_iter(str(i))
-            self._status("Describing keyspace '%s'..." % k)
-            r = yield c.describe_keyspace(k)
             self._status("Received description of keyspace '%s':"""
-                         "%s column families" % (k, len(r)))
-            self._ksmap[k] = r
-            print r
-            for col, info in r.items():
-                self.keyspaces.append(kiter, [col])
+                         "%s column families" % (k.name, len(k.cf_defs)))
+            cfs = {}
+            for cf in k.cf_defs: cfs[cf.name] = cf
+            self._ksmap[k.name] = cfs
+            for cf in k.cf_defs:
+                self.keyspaces.append(kiter, [cf.name])
        
     def _setupColumns(self):
         if self.columns:
@@ -202,9 +203,12 @@ class ChitonViewer(object):
         self._addcol(self.columnsView, 'Column name', 0)
         self._addcol(self.columnsView, 'Value', 1)
         self._addcol(self.columnsView, 'Timestamp', 2)
-        self.columns = gtk.ListStore(str, str, str)
+        self._addcol(self.columnsView, 'TTL', 3)
+        self.columns = gtk.ListStore(str, str, str, str)
         self.columnsView.set_model(self.columns)
                 
+        
+    @defer.inlineCallbacks
     def keyspaceChanged(self, selection):
         self._resetpages()
         tree, path = selection.get_selected_rows()
@@ -219,17 +223,17 @@ class ChitonViewer(object):
                 self.entryTable.show()
             self.columns.clear()
         if self._currentcf:
-            self._client = CassandraClient(self.cmanager, self._currentks)
+            yield self._client.set_keyspace(self._currentks)
             cf = self._ksmap[self._currentks][self._currentcf]
-            if cf['Type'] == 'Super':
-                self._status("Column family '%s': Type: %s, CompareWith: %s, """
-                             "CompareSubWith: %s" % (self._currentcf, cf['Type'],
-                                cf['CompareWith'], cf['CompareSubcolumnsWith']))
+            if cf.column_type == 'Super':
+                self._status("Column family '%s': Type: %s, Comparator: %s, """
+                             "Subcomparator: %s" % (self._currentcf, cf.column_type,
+                                cf.comparator_type, cf.subcomparator_type))
                 self.columnEntry.show()
                 self.columnLabel.show()
             else:
-                self._status("Column family '%s': Type: %s, CompareWith: %s """
-                             % (self._currentcf, cf['Type'], cf['CompareWith']))
+                self._status("Column family '%s': Type: %s, Comparator: %s """
+                             % (self._currentcf, cf.column_type, cf.comparator_type))
                 self.columnEntry.hide()
                 self.columnLabel.hide()
 
@@ -237,11 +241,11 @@ class ChitonViewer(object):
         unames = ['org.apache.cassandra.db.marshal.TimeUUIDType',
                   'org.apache.cassandra.db.marshal.LexicalUUIDType']
         cf = self._ksmap[self._currentks][self._currentcf]
-        if cf['Type'] == 'Super':
-            compare = 'CompareSubcolumnsWith'
+        if cf.column_type == 'Super':
+            compare = 'subcomparator_type'
         else:
-            compare = 'CompareWith'
-        if cf[compare] in unames:
+            compare = 'comparator_type'
+        if getattr(cf, compare) in unames:
             return uuid.UUID(bytes=column)
         else:
             return column
@@ -252,7 +256,7 @@ class ChitonViewer(object):
             self._resetpages()
             self._updateCompletion()
         try:
-            if self._ksmap[self._currentks][self._currentcf]['Type'] == 'Super':
+            if self._ksmap[self._currentks][self._currentcf].comparator_type == 'Super':
                 path = ColumnParent(column_family=self._currentcf,
                                     super_column=self.columnEntry.get_text())
             else:
@@ -266,7 +270,8 @@ class ChitonViewer(object):
                 cols.reverse()
             for col in cols:
                 self.columns.append([self.decodeColumn(col.column.name),
-                                     col.column.value, col.column.timestamp])
+                                     col.column.value, col.column.clock.timestamp,
+                                     col.column.ttl])
             if cols:
                 self._firstcol = cols[0].column.name
                 self._lastcol = cols[-1].column.name
