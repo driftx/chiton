@@ -270,7 +270,7 @@ class ChitonViewer(object):
                 cols.reverse()
             for col in cols:
                 self.columns.append([self.decodeColumn(col.column.name),
-                                     col.column.value, col.column.clock.timestamp,
+                                     col.column.value, col.column.timestamp,
                                      col.column.ttl])
             if cols:
                 self._firstcol = cols[0].column.name
